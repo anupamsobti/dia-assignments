@@ -21,6 +21,15 @@ def luminanceRemap(sourceImage,inputImage):
             newValue = (inputImageStd * (sourceImage.item(x,y) - sourceImageMean) /sourceImageStd) + inputImageMean
             sourceImage.itemset((x,y),newValue)
 
+def stdDeviationFilter(img):
+    #Standard deviation = E[X^2] - E^2[X]
+    #averagingKernel = np.ones((5,5),np.uint8)/25
+    averagingKernel = np.ones((10,10),np.uint8)/100
+    meanImage = cv2.filter2D(img,-1,averagingKernel)
+    meanImageSquare = meanImage * meanImage
+    meanOfImageSquare = cv2.filter2D(img*img,-1,averagingKernel)
+    stdDeviationImage = np.sqrt(np.abs(meanOfImageSquare - meanImageSquare))
+    return stdDeviationImage
 
 #Function returns the index of the array where the closest value is present
 def find_nearest(value,array):
@@ -48,15 +57,18 @@ convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 luminanceRemap(sourceL,inputGrayImage)
 
 #Currently using mean instead of std deviation for calculation of neightborhood statistics
-averagingKernel = np.ones((3,3),np.uint8)/9
-neighborhoodInfo = cv2.filter2D(inputGrayImage,-1,averagingKernel)
+#averagingKernel = np.ones((5,5),np.uint8)/25
+#neighborhoodInfo = cv2.filter2D(inputGrayImage,-1,averagingKernel)
+
+neighborhoodInfo = stdDeviationFilter(inputGrayImage)
 
 #Choose samples from source Image
 pointsFromSource = [(random.randrange(480),random.randrange(640)) for x in range(200)]
 intensitiesFromSource = []
+stdDeviationOfSource = stdDeviationFilter(sourceL)
 for point in pointsFromSource:
     (x,y) = point
-    intensitiesFromSource.append(sourceL[x,y])
+    intensitiesFromSource.append(sourceL[x,y]/2 + stdDeviationOfSource[x,y]/2)
 
 #Find nearest match for each pixel and update output image with it's alpha/beta values
 outputImage = np.zeros((480,640,3),np.uint8)
@@ -77,6 +89,7 @@ inputGrayHist = cv2.calcHist([inputGrayImage],[0],None,[256],[0,255])
 sourceHist = cv2.calcHist([sourceL],[0],None,[256],[0,255])
 
 #Plot Images
+#plt.subplot(231),plt.imshow(stdDeviationFilter(inputGrayImage),'gray'),plt.title('Gray Input')
 plt.subplot(231),plt.imshow(inputGrayImage,'gray'),plt.title('Gray Input')
 plt.subplot(233),plt.imshow(outputImage),plt.title('Colored Output')
 inputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2RGB)
