@@ -21,7 +21,7 @@ def invert(img):
     return (255-img)
 
 def nothing(value):
-    print(value)
+    #print(value)
     pass
 
 
@@ -47,11 +47,11 @@ cv2.createTrackbar('tao','image',0,255,nothing)
 
 while(1):
     # get current positions of four trackbars
-    sigma = cv2.getTrackbarPos('sigma','image')
-    k = cv2.getTrackbarPos('k','image')
-    eps = cv2.getTrackbarPos('eps','image')
-    sai = cv2.getTrackbarPos('sai','image')/256
-    tao = cv2.getTrackbarPos('tao','image')
+    sigma = cv2.getTrackbarPos('sigma','image')/15
+    k = cv2.getTrackbarPos('k','image')/15
+    eps = cv2.getTrackbarPos('eps','image') - 128
+    sai = cv2.getTrackbarPos('sai','image')/50
+    tao = cv2.getTrackbarPos('tao','image')/50
 
     gaussian1 = cv2.GaussianBlur(inputImage,(sizeOfKernel,sizeOfKernel),sigmaX = sigma,sigmaY = sigma)
     gaussian2 = cv2.GaussianBlur(inputImage,(sizeOfKernel,sizeOfKernel),sigmaX = k*sigma,sigmaY = k*sigma)
