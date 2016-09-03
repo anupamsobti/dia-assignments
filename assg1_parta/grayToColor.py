@@ -37,13 +37,40 @@ def find_nearest(value,array):
     idx = (np.abs(array-value)).argmin()
     return idx
 
+def transferColor(inputGrayImage,sourceImage,outputImage,boundary):
+    (sourceL,sourceA,sourceB) = sourceImage
+    (xmin,xmax,ymin,ymax) = boundary
+    #remap luminance for the swatch
+    luminanceRemap(sourceL[xmin:xmax,ymin:ymax],inputGrayImage[xmin:xmax,ymin:ymax])
+    #calculate std deviation for neighborhood of input gray image
+    neighborhoodInfo = stdDeviationFilter(inputGrayImage[xmin:xmax,ymin:ymax])
+    #Choose samples from source Image
+    pointsFromSource = [(random.randrange(xmin,xmax),random.randrange(ymin,ymax)) for x in range(200)]
+    intensitiesFromSource = []
+    #calculate std deviation of samples in source
+    stdDeviationOfSource = stdDeviationFilter(sourceL[xmin:xmax,ymin:ymax])
+    #populate a list of intensitiesFromSource which contains weighted sum of std deviation and luminance of randomly chosen points
+    for point in pointsFromSource:
+        (x,y) = point
+        intensitiesFromSource.append(sourceL[x,y]/2 + stdDeviationOfSource[x,y]/2)
+    #Find matching points and assign colors
+    for x in range(xmin,xmax):
+        for y in range(ymin,ymax):
+            weightedIntensity = (inputGrayImage.item(x,y) + neighborhoodInfo.item(x,y))/2
+            index = find_nearest(weightedIntensity,intensitiesFromSource)
+            outputImage.itemset((x,y,0),inputGrayImage.item(x,y))
+            (sourceX,sourceY) = pointsFromSource[index]
+            outputImage.itemset((x,y,1),sourceA.item(sourceX,sourceY))
+            outputImage.itemset((x,y,2),sourceB.item(sourceX,sourceY))
+
+
+
+
 #Resize input images to 640x480
 print("Using input image as ",sys.argv[1])
 print("Using colored input source image as ",sys.argv[2])
-#inputGrayImage = cv2.imread("inputGray.jpg",0)
 inputGrayImage = cv2.imread(sys.argv[1],0)
 inputGrayImage = cv2.resize(inputGrayImage,(640,480),0,0,interpolation = cv2.INTER_CUBIC)
-#inputColorImage = cv2.imread("sourceImage.png")
 inputColorImage = cv2.imread(sys.argv[2])
 inputColorImage = cv2.resize(inputColorImage,(640,480),0,0,interpolation = cv2.INTER_CUBIC)
 
@@ -51,37 +78,11 @@ inputColorImage = cv2.resize(inputColorImage,(640,480),0,0,interpolation = cv2.I
 convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 (sourceL,sourceA,sourceB) = cv2.split(convertedInputColorImage)
 
-#Remap Luminance of source image to gray image
-#print("Input Image : ",inputGrayImage.shape)
-#print("Source Image: ",sourceL.shape)
-luminanceRemap(sourceL,inputGrayImage)
-
-#Currently using mean instead of std deviation for calculation of neightborhood statistics
-#averagingKernel = np.ones((5,5),np.uint8)/25
-#neighborhoodInfo = cv2.filter2D(inputGrayImage,-1,averagingKernel)
-
-neighborhoodInfo = stdDeviationFilter(inputGrayImage)
-
-#Choose samples from source Image
-pointsFromSource = [(random.randrange(480),random.randrange(640)) for x in range(200)]
-intensitiesFromSource = []
-stdDeviationOfSource = stdDeviationFilter(sourceL)
-for point in pointsFromSource:
-    (x,y) = point
-    intensitiesFromSource.append(sourceL[x,y]/2 + stdDeviationOfSource[x,y]/2)
-
-#Find nearest match for each pixel and update output image with it's alpha/beta values
+#Define a black outputImage
 outputImage = np.zeros((480,640,3),np.uint8)
-(Xmax,Ymax) = inputGrayImage.shape
-#print(Xmax,Ymax)
-for x in range(Xmax):
-    for y in range(Ymax):
-        weightedIntensity = (inputGrayImage.item(x,y) + neighborhoodInfo.item(x,y))/2
-        index = find_nearest(weightedIntensity,intensitiesFromSource)
-        outputImage.itemset((x,y,0),inputGrayImage.item(x,y))
-        (sourceX,sourceY) = pointsFromSource[index]
-        outputImage.itemset((x,y,1),sourceA.item(sourceX,sourceY))
-        outputImage.itemset((x,y,2),sourceB.item(sourceX,sourceY))
+
+transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639))
+
 
 outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2RGB)
 #Calculate Histograms
