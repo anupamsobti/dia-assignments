@@ -44,21 +44,25 @@ def find_nearest(value,array):
 
 #Makes the output image colored based on inputs from sample image
 def transferColor(inputGrayImage,sourceImage,outputImage,grayBoundary,sourceBoundary):
+    global neighborhoodInfo,stdDeviationOfSource
     (sourceL,sourceA,sourceB) = sourceImage
     (gray_xmin,gray_xmax,gray_ymin,gray_ymax) = grayBoundary
     (sourcexmin,sourcexmax,sourceymin,sourceymax) = sourceBoundary
+    print("Gray Boundary : ",grayBoundary) #Debug
+    print("Source Boundary: ",sourceBoundary)   #Debug
     #remap luminance for the swatch
     luminanceRemap(sourceL[sourcexmin:sourcexmax,sourceymin:sourceymax],inputGrayImage[gray_xmin:gray_xmax,gray_ymin:gray_ymax])
-    #calculate std deviation for neighborhood of input gray image
-    neighborhoodInfo = stdDeviationFilter(inputGrayImage[gray_xmin:gray_xmax,gray_ymin:gray_ymax])
+
     #Choose samples from source Image
     pointsFromSource = [(random.randrange(sourcexmin,sourcexmax),random.randrange(sourceymin,sourceymax)) for x in range(200)]
+    #print(pointsFromSource[1:10])
     intensitiesFromSource = []
-    #calculate std deviation of samples in source
-    stdDeviationOfSource = stdDeviationFilter(sourceL[sourcexmin:sourcexmax,sourceymin:sourceymax])
+
     #populate a list of intensitiesFromSource which contains weighted sum of std deviation and luminance of randomly chosen points
     for point in pointsFromSource:
         (x,y) = point
+        #print(point)    #Debug
+        #print("Shape of source : ",sourceL.shape," Source of Std deviation : ",stdDeviationOfSource.shape)
         intensitiesFromSource.append(sourceL[x,y]/2 + stdDeviationOfSource[x,y]/2)
     #Find matching points and assign colors
     for x in range(gray_xmin,gray_xmax):
@@ -81,7 +85,8 @@ def grayMouseCallback(event,x,y,flags,param):
         print ("Grayscale: Ends at ",x,y)
         cv2.rectangle(inputGrayImage_swatched,(startX,startY),(endX,endY),0,3)
         if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
-            graySwatches.append((startX,startY,endX,endY))
+            #graySwatches.append((startX,endX,startY,endY))
+            graySwatches.append((startY,endY,startX,endX))  #Corrected to swap x and y since mouse callback returns swapped x and y
 
 def colorMouseCallback(event,x,y,flags,param):
     global colorSwatches,inputColorImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
@@ -93,7 +98,8 @@ def colorMouseCallback(event,x,y,flags,param):
         print ("Colored Input: Ends at ",x,y)
         cv2.rectangle(inputColorImage_swatched,(startX,startY),(endX,endY),(255,0,0),3)
         if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
-            colorSwatches.append((startX,startY,endX,endY))
+            #colorSwatches.append((startX,endX,startY,endY))
+            colorSwatches.append((startY,endY,startX,endX)) #Corrected to swap x and y since mouse callback returns swapped x and y
 
 
 #Resize input images to 640x480
@@ -104,12 +110,18 @@ inputGrayImage = cv2.resize(inputGrayImage,(640,480),0,0,interpolation = cv2.INT
 inputColorImage = cv2.imread(sys.argv[2])
 inputColorImage = cv2.resize(inputColorImage,(640,480),0,0,interpolation = cv2.INTER_CUBIC)
 
-inputGrayImage_swatched = inputGrayImage
-inputColorImage_swatched = inputColorImage
+inputGrayImage_swatched = inputGrayImage.copy()
+inputColorImage_swatched = inputColorImage.copy()
 
 #Convert to Lab and separate components
 convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 (sourceL,sourceA,sourceB) = cv2.split(convertedInputColorImage)
+
+#calculate std deviation for neighborhood of input gray image
+neighborhoodInfo = stdDeviationFilter(inputGrayImage)
+
+#calculate std deviation of samples in source
+stdDeviationOfSource = stdDeviationFilter(sourceL)
 
 #Define a black outputImage
 outputImage = np.zeros((480,640,3),np.uint8)
@@ -132,8 +144,10 @@ while(1):
             exit()
         break
 
-transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639),(0,479,0,639))
-
+#transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639),(0,479,0,639))
+for index,swatch in enumerate(graySwatches):
+    print("Calling transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,",swatch,colorSwatches[index],")")
+    transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,graySwatches[index],colorSwatches[index])
 
 outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2BGR)
 cv2.imshow("Output Image",outputImage)
