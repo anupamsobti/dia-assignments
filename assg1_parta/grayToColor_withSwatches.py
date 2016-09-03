@@ -5,8 +5,13 @@ import random
 import sys
 from matplotlib import pyplot as plt
 
-##Functions for the main program
+#Constants/Global variables
+minRegionX = 10
+minRegionY = 10
+graySwatches = []
+colorSwatches = []
 
+##Functions for the main program
 #Function for luminance remapping - Returns image with remapped histogram
 def luminanceRemap(sourceImage,inputImage):
     sourceImageMean = sourceImage.mean()
@@ -37,6 +42,7 @@ def find_nearest(value,array):
     idx = (np.abs(array-value)).argmin()
     return idx
 
+#Makes the output image colored based on inputs from sample image
 def transferColor(inputGrayImage,sourceImage,outputImage,grayBoundary,sourceBoundary):
     (sourceL,sourceA,sourceB) = sourceImage
     (gray_xmin,gray_xmax,gray_ymin,gray_ymax) = grayBoundary
@@ -64,7 +70,30 @@ def transferColor(inputGrayImage,sourceImage,outputImage,grayBoundary,sourceBoun
             outputImage.itemset((x,y,1),sourceA.item(sourceX,sourceY))
             outputImage.itemset((x,y,2),sourceB.item(sourceX,sourceY))
 
+#Callback for selecting swatches
+def grayMouseCallback(event,x,y,flags,param):
+    global graySwatches,inputGrayImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
+    if event == cv2.EVENT_LBUTTONDOWN:
+        (startX,startY) = (x,y)
+        print ("Grayscale: Starts at ",startX,startY)
+    elif event == cv2.EVENT_LBUTTONUP:
+        endX,endY = x,y
+        print ("Grayscale: Ends at ",x,y)
+        cv2.rectangle(inputGrayImage_swatched,(startX,startY),(endX,endY),0,3)
+        if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
+            graySwatches.append((startX,startY,endX,endY))
 
+def colorMouseCallback(event,x,y,flags,param):
+    global colorSwatches,inputColorImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
+    if event == cv2.EVENT_LBUTTONDOWN:
+        (startX,startY) = (x,y)
+        print ("Colored Input: Starts at ",startX,startY)
+    elif event == cv2.EVENT_LBUTTONUP:
+        endX,endY = x,y
+        print ("Colored Input: Ends at ",x,y)
+        cv2.rectangle(inputColorImage_swatched,(startX,startY),(endX,endY),(255,0,0),3)
+        if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
+            colorSwatches.append((startX,startY,endX,endY))
 
 
 #Resize input images to 640x480
@@ -75,6 +104,9 @@ inputGrayImage = cv2.resize(inputGrayImage,(640,480),0,0,interpolation = cv2.INT
 inputColorImage = cv2.imread(sys.argv[2])
 inputColorImage = cv2.resize(inputColorImage,(640,480),0,0,interpolation = cv2.INTER_CUBIC)
 
+inputGrayImage_swatched = inputGrayImage
+inputColorImage_swatched = inputColorImage
+
 #Convert to Lab and separate components
 convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 (sourceL,sourceA,sourceB) = cv2.split(convertedInputColorImage)
@@ -82,21 +114,28 @@ convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 #Define a black outputImage
 outputImage = np.zeros((480,640,3),np.uint8)
 
+#Creating windows to display input image and source image
+cv2.namedWindow("Input Grayscale Image")
+cv2.setMouseCallback("Input Grayscale Image",grayMouseCallback)
+
+cv2.namedWindow("Input Colored Image")
+cv2.setMouseCallback("Input Colored Image",colorMouseCallback)
+
+#Get swatches
+while(1):
+    cv2.imshow("Input Grayscale Image",inputGrayImage_swatched)
+    cv2.imshow("Input Colored Image",inputColorImage_swatched)
+    if cv2.waitKey(20) & 0xFF == 27:
+        if len(colorSwatches) != len(graySwatches):
+            print("Number of swatches is unequal")
+            cv2.destroyAllWindows()
+            exit()
+        break
+
 transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639),(0,479,0,639))
 
 
-outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2RGB)
-#Calculate Histograms
-inputGrayHist = cv2.calcHist([inputGrayImage],[0],None,[256],[0,255])
-sourceHist = cv2.calcHist([sourceL],[0],None,[256],[0,255])
-
-#Plot Images
-#plt.subplot(231),plt.imshow(stdDeviationFilter(inputGrayImage),'gray'),plt.title('Gray Input')
-plt.subplot(231),plt.imshow(inputGrayImage,'gray'),plt.title('Gray Input')
-plt.subplot(233),plt.imshow(outputImage),plt.title('Colored Output')
-inputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2RGB)
-plt.subplot(232),plt.imshow(inputColorImage),plt.title('Color Input')
-plt.subplot(234),plt.plot(inputGrayHist),plt.title('Gray Image Histogram')
-plt.subplot(235),plt.plot(sourceHist),plt.title('Source Luminance Histogram - after remapping')
-plt.subplot(236),plt.imshow(sourceL,'gray'),plt.title('Luminance Remapped Source')
-plt.show()
+outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2BGR)
+cv2.imshow("Output Image",outputImage)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
