@@ -83,10 +83,12 @@ def grayMouseCallback(event,x,y,flags,param):
     elif event == cv2.EVENT_LBUTTONUP:
         endX,endY = x,y
         print ("Grayscale: Ends at ",x,y)
-        cv2.rectangle(inputGrayImage_swatched,(startX,startY),(endX,endY),0,3)
         if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
             #graySwatches.append((startX,endX,startY,endY))
             graySwatches.append((startY,endY,startX,endX))  #Corrected to swap x and y since mouse callback returns swapped x and y
+            cv2.rectangle(inputGrayImage_swatched,(startX,startY),(endX,endY),0,3)
+        else:
+            print("Swatch Rejected")
 
 def colorMouseCallback(event,x,y,flags,param):
     global colorSwatches,inputColorImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
@@ -96,10 +98,12 @@ def colorMouseCallback(event,x,y,flags,param):
     elif event == cv2.EVENT_LBUTTONUP:
         endX,endY = x,y
         print ("Colored Input: Ends at ",x,y)
-        cv2.rectangle(inputColorImage_swatched,(startX,startY),(endX,endY),(255,0,0),3)
         if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
             #colorSwatches.append((startX,endX,startY,endY))
             colorSwatches.append((startY,endY,startX,endX)) #Corrected to swap x and y since mouse callback returns swapped x and y
+            cv2.rectangle(inputColorImage_swatched,(startX,startY),(endX,endY),(255,0,0),3)
+        else:
+            print("Swatch rejected")
 
 
 #Resize input images to 640x480
