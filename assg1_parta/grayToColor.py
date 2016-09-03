@@ -14,7 +14,7 @@ def luminanceRemap(sourceImage,inputImage):
     inputImageMean = inputImage.mean()
     inputImageStd = inputImage.std()
     #print("sourceImageMean : ",sourceImageMean, " Input Image Mean : ",inputImageMean)
-    (Xmax,Ymax) = inputImage.shape
+    (Xmax,Ymax) = sourceImage.shape
     for x in range(Xmax):
         for y in range(Ymax):
             #newValue = ((sourceImage.item(x,y) - sourceImageMean) * (inputImageStd/sourceImageStd)) + inputImageMean
@@ -37,25 +37,26 @@ def find_nearest(value,array):
     idx = (np.abs(array-value)).argmin()
     return idx
 
-def transferColor(inputGrayImage,sourceImage,outputImage,boundary):
+def transferColor(inputGrayImage,sourceImage,outputImage,grayBoundary,sourceBoundary):
     (sourceL,sourceA,sourceB) = sourceImage
-    (xmin,xmax,ymin,ymax) = boundary
+    (gray_xmin,gray_xmax,gray_ymin,gray_ymax) = grayBoundary
+    (sourcexmin,sourcexmax,sourceymin,sourceymax) = sourceBoundary
     #remap luminance for the swatch
-    luminanceRemap(sourceL[xmin:xmax,ymin:ymax],inputGrayImage[xmin:xmax,ymin:ymax])
+    luminanceRemap(sourceL[sourcexmin:sourcexmax,sourceymin:sourceymax],inputGrayImage[gray_xmin:gray_xmax,gray_ymin:gray_ymax])
     #calculate std deviation for neighborhood of input gray image
-    neighborhoodInfo = stdDeviationFilter(inputGrayImage[xmin:xmax,ymin:ymax])
+    neighborhoodInfo = stdDeviationFilter(inputGrayImage[gray_xmin:gray_xmax,gray_ymin:gray_ymax])
     #Choose samples from source Image
-    pointsFromSource = [(random.randrange(xmin,xmax),random.randrange(ymin,ymax)) for x in range(200)]
+    pointsFromSource = [(random.randrange(sourcexmin,sourcexmax),random.randrange(sourceymin,sourceymax)) for x in range(200)]
     intensitiesFromSource = []
     #calculate std deviation of samples in source
-    stdDeviationOfSource = stdDeviationFilter(sourceL[xmin:xmax,ymin:ymax])
+    stdDeviationOfSource = stdDeviationFilter(sourceL[sourcexmin:sourcexmax,sourceymin:sourceymax])
     #populate a list of intensitiesFromSource which contains weighted sum of std deviation and luminance of randomly chosen points
     for point in pointsFromSource:
         (x,y) = point
         intensitiesFromSource.append(sourceL[x,y]/2 + stdDeviationOfSource[x,y]/2)
     #Find matching points and assign colors
-    for x in range(xmin,xmax):
-        for y in range(ymin,ymax):
+    for x in range(gray_xmin,gray_xmax):
+        for y in range(gray_ymin,gray_ymax):
             weightedIntensity = (inputGrayImage.item(x,y) + neighborhoodInfo.item(x,y))/2
             index = find_nearest(weightedIntensity,intensitiesFromSource)
             outputImage.itemset((x,y,0),inputGrayImage.item(x,y))
@@ -81,7 +82,7 @@ convertedInputColorImage = cv2.cvtColor(inputColorImage,cv2.COLOR_BGR2Lab)
 #Define a black outputImage
 outputImage = np.zeros((480,640,3),np.uint8)
 
-transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639))
+transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639),(0,239,0,319))
 
 
 outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2RGB)
