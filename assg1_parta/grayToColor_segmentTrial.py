@@ -156,18 +156,24 @@ while(1):
             exit()
         break
 
-#transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,479,0,639),(0,479,0,639))
+globalMask = np.ones((480,640),np.uint8)*255
 for index,swatch in enumerate(graySwatches):
     outputImage = np.zeros((480,640,3),np.uint8)
     print("Calling transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,",swatch,colorSwatches[index],")")
     #transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,graySwatches[index],colorSwatches[index])
     mask = getMask(inputGrayImage,swatch)
+    mask = cv2.bitwise_and(globalMask,mask)
+    globalMask = cv2.bitwise_and(globalMask,cv2.bitwise_not(mask))
     print("Shape of mask is : ",mask.shape)
     imageBoundary = (0,inputGrayImage.shape[0],0,inputGrayImage.shape[1])
     transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,imageBoundary,colorSwatches[index])
     threeD_mask = cv2.merge((mask,mask,mask))
     finalOutputImage = finalOutputImage + cv2.bitwise_and(outputImage,threeD_mask)
 
+outputImage = np.zeros((480,640,3),np.uint8)
+transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,inputGrayImage.shape[0],0,inputGrayImage.shape[1]),(0,inputColorImage.shape[0],0,inputColorImage.shape[1]))
+threeD_mask = cv2.merge((globalMask,globalMask,globalMask))
+finalOutputImage = finalOutputImage + cv2.bitwise_and(outputImage,threeD_mask)
 
 #outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2BGR)
 finalOutputImage = cv2.cvtColor(finalOutputImage,cv2.COLOR_Lab2BGR)
