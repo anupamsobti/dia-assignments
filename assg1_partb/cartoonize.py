@@ -61,7 +61,7 @@ while(1):
     outputImage = myThreshold(DoG_image,eps,sai)
     outputImage = invert(outputImage)
     cv2.imshow('image',outputImage)
-    k = cv2.waitKey(1) & 0xFF
+    k = cv2.waitKey(30) & 0xFF
     if k == 27:
         break
 

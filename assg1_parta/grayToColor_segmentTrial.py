@@ -91,12 +91,13 @@ def grayMouseCallback(event,x,y,flags,param):
             print("Swatch Rejected")
 
 def getMask(img,boundary):
+    rangeValue = 1
     xmin,xmax,ymin,ymax = boundary 
     meanOfSwatch = img[xmin:xmax,ymin:ymax].mean()
     stdOfSwatch = img[xmin:xmax,ymin:ymax].std()
     print("Standard Deviation of Swatch :", stdOfSwatch)
-    ret,temp1 = cv2.threshold(img,meanOfSwatch - 2*stdOfSwatch,255,cv2.THRESH_BINARY)
-    ret,temp2 = cv2.threshold(img,meanOfSwatch + 2*stdOfSwatch,255,cv2.THRESH_BINARY)
+    ret,temp1 = cv2.threshold(img,meanOfSwatch - rangeValue * stdOfSwatch,255,cv2.THRESH_BINARY)
+    ret,temp2 = cv2.threshold(img,meanOfSwatch + rangeValue * stdOfSwatch,255,cv2.THRESH_BINARY)
     mask = np.abs(temp1 - temp2)
     return mask
 
@@ -159,6 +160,9 @@ while(1):
             exit()
         break
 
+cv2.imwrite("SwatchedInputGrayscale.png",inputGrayImage_swatched)
+cv2.imwrite("InputColoredImageSwatched.png",inputColorImage_swatched)
+
 globalMask = np.ones((480,640),np.uint8)*255
 for index,swatch in enumerate(graySwatches):
     outputImage = np.zeros((480,640,3),np.uint8)
@@ -168,6 +172,7 @@ for index,swatch in enumerate(graySwatches):
     mask = cv2.bitwise_and(globalMask,mask)
     globalMask = cv2.bitwise_and(globalMask,cv2.bitwise_not(mask))
     cv2.imshow("Mask",mask)
+    cv2.imwrite("Mask" + str(index) + ".png",mask)
     cv2.waitKey(0)
     print("Shape of mask is : ",mask.shape)
     imageBoundary = (0,inputGrayImage.shape[0],0,inputGrayImage.shape[1])
@@ -177,11 +182,13 @@ for index,swatch in enumerate(graySwatches):
 
 outputImage = np.zeros((480,640,3),np.uint8)
 transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,(0,inputGrayImage.shape[0],0,inputGrayImage.shape[1]),(0,inputColorImage.shape[0],0,inputColorImage.shape[1]))
+cv2.imwrite("Global_mask.png",globalMask)
 threeD_mask = cv2.merge((globalMask,globalMask,globalMask))
 finalOutputImage = finalOutputImage + cv2.bitwise_and(outputImage,threeD_mask)
 
 #outputImage = cv2.cvtColor(outputImage,cv2.COLOR_Lab2BGR)
 finalOutputImage = cv2.cvtColor(finalOutputImage,cv2.COLOR_Lab2BGR)
+cv2.imwrite("FinalOutputImage.png",finalOutputImage)
 cv2.imshow("Output Image",finalOutputImage)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
