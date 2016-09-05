@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import random
 import sys
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 
 #Constants/Global variables
 minRegionX = 10

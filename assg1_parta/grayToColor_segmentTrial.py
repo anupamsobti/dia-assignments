@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import random
 import sys
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 
 #Constants/Global variables
 minRegionX = 10
@@ -92,8 +92,11 @@ def grayMouseCallback(event,x,y,flags,param):
 
 def getMask(img,boundary):
     xmin,xmax,ymin,ymax = boundary 
-    ret,temp1 = cv2.threshold(img,img[xmin:xmax,ymin:ymax].mean() - 30,255,cv2.THRESH_BINARY)
-    ret,temp2 = cv2.threshold(img,img[xmin:xmax,ymin:ymax].mean() + 30,255,cv2.THRESH_BINARY)
+    meanOfSwatch = img[xmin:xmax,ymin:ymax].mean()
+    stdOfSwatch = img[xmin:xmax,ymin:ymax].std()
+    print("Standard Deviation of Swatch :", stdOfSwatch)
+    ret,temp1 = cv2.threshold(img,meanOfSwatch - 2*stdOfSwatch,255,cv2.THRESH_BINARY)
+    ret,temp2 = cv2.threshold(img,meanOfSwatch + 2*stdOfSwatch,255,cv2.THRESH_BINARY)
     mask = np.abs(temp1 - temp2)
     return mask
 
@@ -164,6 +167,8 @@ for index,swatch in enumerate(graySwatches):
     mask = getMask(inputGrayImage,swatch)
     mask = cv2.bitwise_and(globalMask,mask)
     globalMask = cv2.bitwise_and(globalMask,cv2.bitwise_not(mask))
+    cv2.imshow("Mask",mask)
+    cv2.waitKey(0)
     print("Shape of mask is : ",mask.shape)
     imageBoundary = (0,inputGrayImage.shape[0],0,inputGrayImage.shape[1])
     transferColor(inputGrayImage,(sourceL,sourceA,sourceB),outputImage,imageBoundary,colorSwatches[index])
