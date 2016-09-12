@@ -1,0 +1,1 @@
+The program implements XDoG as shown in the paper by Holger Winnemoller, "XDoG: Advanced Image Stylization using eXtended Difference of Gaussians). The various parameters are exposed as trackbars in the output image.

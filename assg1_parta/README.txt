@@ -1,0 +1,2 @@
+The files above are used to implement a grayscale to color conversion based on the paper by Tomihisa Welsh, Michael Ashikhmin and Klaus Mueller: "Transferring Color To Greyscale Images". The swatches can be selected on the input images by selecting the rectangular regions consecutively (Press Esc when done). 
+I use a technique which selects the target swatch based on intensity segmentation instead of the L2 distance measurement as suggested in the paper.
