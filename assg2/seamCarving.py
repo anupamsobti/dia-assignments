@@ -42,7 +42,7 @@ def deleteHorizontalSeam(img):
     #Color Seam in original image
     seam = printSeamFrom(img,0,minSeam)
     cv2.imshow("Seam",seam)
-    cv2.waitKey(0)
+    #cv2.waitKey(0)
     deletedSeamImage = np.zeros((IMGY -1 ,IMGX,3),np.uint8)
     print ("New Image Size : ", deletedSeamImage.shape)
     count = 0
