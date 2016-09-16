@@ -23,10 +23,13 @@ def deleteVerticalSeam(img,noOfSeams):
                 #minPoint = np.argmin(yEnergyFunction[x-1,y],yEnergyFunction[x-1,y+1],yEnergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x,y+1
+                    yEnergyFunction[y,x] = 255  #Added to handle duplication of lines
                 elif minPoint == 1:
                     x,y = x-1,y+1
+                    yEnergyFunction[y,x] = 255
                 else:
                     x,y = x+1,y+1
+                    yEnergyFunction[y,x] = 255
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -76,10 +79,13 @@ def deleteHorizontalSeam(img,noOfSeams):
                 #minPoint = np.argmin(xenergyFunction[x-1,y],xenergyFunction[x-1,y+1],xenergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x+1,y
+                    xenergyFunction[y,x] = 255
                 elif minPoint == 1:
                     x,y = x+1,y+1
+                    xenergyFunction[y,x] = 255
                 else:
                     x,y = x+1,y-1
+                    xenergyFunction[y,x] = 255
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -107,12 +113,13 @@ def deleteHorizontalSeam(img,noOfSeams):
             deletedSeamImage[y,x,0] = L[y+seamSum,x]
             deletedSeamImage[y,x,1] = A[y+seamSum,x]
             deletedSeamImage[y,x,2] = B[y+seamSum,x]
+        print ("X = ",x,"Seam Sum : ",seamSum)
 
     return cv2.cvtColor(deletedSeamImage,cv2.COLOR_Lab2BGR)
 
 #newImage = deleteHorizontalSeam(img,50)
 #cv2.imshow("After deleting horizontal",img)
-finalImage = deleteVerticalSeam(img,50)
+finalImage = deleteHorizontalSeam(img,150)
 
 #newImage = deleteHorizontalSeam(img)
 #cv2.imwrite("ResizedImage.png",newImage)
