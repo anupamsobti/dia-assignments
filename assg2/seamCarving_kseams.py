@@ -57,7 +57,20 @@ def deleteVerticalSeam(img,noOfSeams):
             deletedSeamImage[y,x,0] = L[y,x+seamSum]
             deletedSeamImage[y,x,1] = A[y,x+seamSum]
             deletedSeamImage[y,x,2] = B[y,x+seamSum]
-
+    for y in range(IMGY):
+        newImgX = 0
+        flag = 0
+        for x in range(IMGX):
+            if seam[y,x] == 0 and flag == 0:
+                deletedSeamImage[y,newImgX,0] = L[y,x]
+                deletedSeamImage[y,newImgX,1] = A[y,x]
+                deletedSeamImage[y,newImgX,2] = B[y,x]
+                if newImgX < IMGX - noOfSeams -1:
+                    newImgX+=1 
+            elif seam[y,x] > 1:
+                flag+=seam[y,x] - 1
+            else:
+                flag -=1
     return cv2.cvtColor(deletedSeamImage,cv2.COLOR_Lab2BGR)
 
 
@@ -107,19 +120,25 @@ def deleteHorizontalSeam(img,noOfSeams):
     deletedSeamImage = np.zeros((IMGY - noOfSeams,IMGX,3),np.uint8)
     print ("New Image Size : ", deletedSeamImage.shape)
     for x in range(IMGX):
-        seamSum = 0
-        for y in range(IMGY-noOfSeams):
-            seamSum += seam[y,x]
-            deletedSeamImage[y,x,0] = L[y+seamSum,x]
-            deletedSeamImage[y,x,1] = A[y+seamSum,x]
-            deletedSeamImage[y,x,2] = B[y+seamSum,x]
-        print ("X = ",x,"Seam Sum : ",seamSum)
+        newImgY = 0
+        flag = 0
+        for y in range(IMGY):
+            if seam[y,x] == 0:
+                deletedSeamImage[newImgY,x,0] = L[y,x]
+                deletedSeamImage[newImgY,x,1] = A[y,x]
+                deletedSeamImage[newImgY,x,2] = B[y,x]
+                if newImgY < IMGY - noOfSeams -1:
+                    newImgY+=1 
+            elif seam[y,x] > 1:
+                flag += seam[y,x]-1
+            else:
+                flag -=1
 
     return cv2.cvtColor(deletedSeamImage,cv2.COLOR_Lab2BGR)
 
 #newImage = deleteHorizontalSeam(img,50)
 #cv2.imshow("After deleting horizontal",img)
-finalImage = deleteHorizontalSeam(img,150)
+finalImage = deleteHorizontalSeam(img,100)
 
 #newImage = deleteHorizontalSeam(img)
 #cv2.imwrite("ResizedImage.png",newImage)
