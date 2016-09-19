@@ -51,13 +51,6 @@ def deleteVerticalSeam(img,noOfSeams):
     deletedSeamImage = np.zeros((IMGY,IMGX - noOfSeams,3),np.uint8)
     print ("New Image Size : ", deletedSeamImage.shape)
     for y in range(IMGY):
-        seamSum = 0
-        for x in range(IMGX - noOfSeams):
-            seamSum += seam[y,x]
-            deletedSeamImage[y,x,0] = L[y,x+seamSum]
-            deletedSeamImage[y,x,1] = A[y,x+seamSum]
-            deletedSeamImage[y,x,2] = B[y,x+seamSum]
-    for y in range(IMGY):
         newImgX = 0
         flag = 0
         for x in range(IMGX):
