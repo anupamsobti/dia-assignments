@@ -60,7 +60,7 @@ def deleteVerticalSeam(img,noOfSeams):
                 deletedSeamImage[y,newImgX,2] = B[y,x]
                 if newImgX < IMGX - noOfSeams -1:
                     newImgX+=1 
-            elif seam[y,x] > 1:
+            elif seam[y,x] >= 1:
                 flag+=seam[y,x] - 1
             else:
                 flag -=1
@@ -116,13 +116,13 @@ def deleteHorizontalSeam(img,noOfSeams):
         newImgY = 0
         flag = 0
         for y in range(IMGY):
-            if seam[y,x] == 0:
+            if seam[y,x] == 0 and flag ==0:
                 deletedSeamImage[newImgY,x,0] = L[y,x]
                 deletedSeamImage[newImgY,x,1] = A[y,x]
                 deletedSeamImage[newImgY,x,2] = B[y,x]
                 if newImgY < IMGY - noOfSeams -1:
                     newImgY+=1 
-            elif seam[y,x] > 1:
+            elif seam[y,x] >= 1:
                 flag += seam[y,x]-1
             else:
                 flag -=1
@@ -131,7 +131,7 @@ def deleteHorizontalSeam(img,noOfSeams):
 
 #newImage = deleteHorizontalSeam(img,50)
 #cv2.imshow("After deleting horizontal",img)
-finalImage = deleteHorizontalSeam(img,100)
+finalImage = deleteVerticalSeam(img,100)
 
 #newImage = deleteHorizontalSeam(img)
 #cv2.imwrite("ResizedImage.png",newImage)
