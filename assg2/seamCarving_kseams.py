@@ -35,7 +35,7 @@ def deleteVerticalSeam(img,noOfSeams):
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
     yEnergyFunction = cv2.Scharr(L,ddepth = -1,dx = 0,dy = 1)
-    cv2.imshow("Energy Function",yEnergyFunction)
+    cv2.imshow("Vertical Energy Function",yEnergyFunction)
     seamWeights = np.float64(yEnergyFunction[0,:])    #Vertical Seam
     for y in range(L.shape[0]-1):
         for x in range(1,L.shape[1]-1):  #Gives Xmax
@@ -83,8 +83,8 @@ def deleteHorizontalSeam(img,noOfSeams):
                 img[y,x,:] = 0
                 seam[y,x] += 1
                 #array = (xenergyFunction[y,x-1],xenergyFunction[y+1,x-1],xenergyFunction[y-1,x-1])
-                array = (xenergyFunction[y,x+1],xenergyFunction[y+1,x+1],xenergyFunction[y-1,x+1])
-                minPoint = np.argmin(array)
+                neighbourArray = (xenergyFunction[y,x+1],xenergyFunction[y+1,x+1],xenergyFunction[y-1,x+1])
+                minPoint = np.argmin(neighbourArray)
                 #minPoint = np.argmin(xenergyFunction[x-1,y],xenergyFunction[x-1,y+1],xenergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x+1,y
@@ -99,27 +99,32 @@ def deleteHorizontalSeam(img,noOfSeams):
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
     xenergyFunction = cv2.Scharr(L,ddepth = -1,dx = 1,dy = 0)
-    cv2.imshow("Energy Function",xenergyFunction)
+    cv2.imshow("Horizontal Energy Function",xenergyFunction)
     seamWeights = np.float64(xenergyFunction[:,0])    #Horizontal Seam
+
+    #Code for minWeights calculation
     x=1;y=0
     seamY = []
     for i in range(IMGY):
         seamY.append(i)
-    while x < IMGX - 1 and y < IMGY - 1:
-        array = (xenergyFunction[seamY[y],x+1],xenergyFunction[seamY[y],x+1],xenergyFunction[seamY[y],x+1])
-        minPoint = np.argmin(array)
-        if minPoint == 0:
-            seamY[y] += 0
-        elif minPoint == 1:
-            seamY[y] += 1
-        else:
-            seamY[y] -= 1
-        x+=1
-        seamWeights[y] += array[minPoint]
+    while y < IMGY - 1:
+        while x < IMGX - 1:
+            neighbourArray = (xenergyFunction[seamY[y],x+1],xenergyFunction[seamY[y],x+1],xenergyFunction[seamY[y],x+1])
+            minPoint = np.argmin(neighbourArray)
+            if minPoint == 0:
+                seamY[y] += 0
+            elif minPoint == 1:
+                seamY[y] += 1
+            else:
+                seamY[y] -= 1
+            x+=1
+            seamWeights[y] += neighbourArray[minPoint]
+        x=1;y+=1
 
     minSeams = np.argpartition(seamWeights,noOfSeams)[:noOfSeams]
     #minSeams = np.argsort(seamWeights)[:noOfSeams]
-    #print(minSeams)
+    #print(seamWeights)
+    #plt.plot(seamWeights)
 
     #Color Seam in original image
     seam = printHorizontalSeamFrom(img,minSeams)
@@ -146,7 +151,7 @@ def deleteHorizontalSeam(img,noOfSeams):
 
 #newImage = deleteHorizontalSeam(img,50)
 #cv2.imshow("After deleting horizontal",img)
-finalImage = deleteHorizontalSeam(img,350)
+finalImage = deleteHorizontalSeam(img,100)
 
 #newImage = deleteHorizontalSeam(img)
 #cv2.imwrite("ResizedImage.png",newImage)
