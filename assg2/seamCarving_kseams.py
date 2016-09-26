@@ -167,7 +167,7 @@ def deleteHorizontalSeam(img,noOfSeams):
 
 #newImage = deleteHorizontalSeam(img,50)
 #cv2.imshow("After deleting horizontal",img)
-finalImage = deleteVerticalSeam(img,100)
+finalImage = deleteVerticalSeam(img,200)
 
 #newImage = deleteHorizontalSeam(img)
 #cv2.imwrite("ResizedImage.png",newImage)
