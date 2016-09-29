@@ -24,13 +24,14 @@ def appendVerticalSeam(img,noOfSeams):
                 #minPoint = np.argmin(yEnergyFunction[x-1,y],yEnergyFunction[x-1,y+1],yEnergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x,y+1
-                    yEnergyFunction[y,x] = 255  #Added to handle duplication of lines
+                    yEnergyFunction[y,x] = 127 #Added to handle duplication of lines
                 elif minPoint == 1:
                     x,y = x-1,y+1
-                    yEnergyFunction[y,x] = 255
+                    yEnergyFunction[y,x] = 127
                 else:
                     x,y = x+1,y+1
-                    yEnergyFunction[y,x] = 255
+                    yEnergyFunction[y,x] = 127
+        cv2.imshow("Appending Vertical Seams",img)
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -107,13 +108,14 @@ def appendHorizontalSeam(img,noOfSeams):
                 minPoint = np.argmin(neighbourArray)
                 if minPoint == 0:
                     x,y = x+1,y
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127 
                 elif minPoint == 1:
                     x,y = x+1,y+1
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127
                 else:
                     x,y = x+1,y-1
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127
+        cv2.imshow("Appending Horizontal Seams",img)
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -191,13 +193,14 @@ def deleteVerticalSeam(img,noOfSeams):
                 #minPoint = np.argmin(yEnergyFunction[x-1,y],yEnergyFunction[x-1,y+1],yEnergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x,y+1
-                    yEnergyFunction[y,x] = 255  #Added to handle duplication of lines
+                    yEnergyFunction[y,x] = 127 #Added to handle duplication of lines
                 elif minPoint == 1:
                     x,y = x-1,y+1
-                    yEnergyFunction[y,x] = 255
+                    yEnergyFunction[y,x] = 127
                 else:
                     x,y = x+1,y+1
-                    yEnergyFunction[y,x] = 255
+                    yEnergyFunction[y,x] = 127
+        cv2.imshow("Deleting Vertical Seams",img)
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -271,13 +274,14 @@ def deleteHorizontalSeam(img,noOfSeams):
                 #minPoint = np.argmin(xenergyFunction[x-1,y],xenergyFunction[x-1,y+1],xenergyFunction[x-1,y-1])
                 if minPoint == 0:
                     x,y = x+1,y
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127
                 elif minPoint == 1:
                     x,y = x+1,y+1
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127
                 else:
                     x,y = x+1,y-1
-                    xenergyFunction[y,x] = 255
+                    xenergyFunction[y,x] = 127
+        cv2.imshow("Deleting Horizontal Seams",img)
         return seam
 
     L,A,B = cv2.split(cv2.cvtColor(img,cv2.COLOR_BGR2Lab))
@@ -332,16 +336,26 @@ def deleteHorizontalSeam(img,noOfSeams):
 
     return cv2.cvtColor(deletedSeamImage,cv2.COLOR_Lab2BGR)
 
-#newImage = deleteHorizontalSeam(img,50)
-#cv2.imshow("After deleting horizontal",img)
-finalImage = deleteVerticalSeam(img,200)
-finalImage = appendHorizontalSeam(finalImage,500)
+finalX,finalY = (int(sys.argv[2]),int(sys.argv[3]))
+hough = int(sys.argv[4])
 
-#newImage = deleteHorizontalSeam(img)
-#cv2.imwrite("ResizedImage.png",newImage)
-cv2.imshow("ResizedImage.png",finalImage)
-cv2.imshow("Image",img)
-#cv2.imshow("Energy Function",xenergyFunction)
-#plt.show()
+IMGY,IMGX = img.shape[0],img.shape[1]
+
+
+if finalY > IMGY:
+    outputImage = appendHorizontalSeam(img,finalY-IMGY)
+else:
+    outputImage = deleteHorizontalSeam(img,IMGY - finalY)
+
+cv2.imshow("After Y Modification",outputImage)
+
+if finalX > IMGX:
+    outputImage = appendVerticalSeam(outputImage,finalX - IMGX)
+else:
+    outputImage = deleteVerticalSeam(outputImage,IMGX-finalX)
+
+cv2.imshow("After X Modification",outputImage)
+
+
 cv2.waitKey(0)
 cv2.destroyAllWindows()
