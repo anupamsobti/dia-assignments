@@ -357,20 +357,7 @@ def deleteHorizontalSeam(img,noOfSeams,houghPoints):
 
     return cv2.cvtColor(deletedSeamImage,cv2.COLOR_Lab2BGR)
 
-finalX,finalY = (int(sys.argv[2]),int(sys.argv[3]))
-hough = int(sys.argv[4])
-
-IMGY,IMGX = img.shape[0],img.shape[1]
-houghPoints = []
-
-if hough != 0:
-    if hough ==1:
-        preserveObject = True
-    elif hough ==2:
-        preserveObject = False
-    houghInputImg = cv2.imread(sys.argv[5],0)
-    print("Hough : Using Reference object as :",sys.argv[5])
-    
+def getHoughPoints(houghInputImg,houghTargetImg):
     sobel64f_x = cv2.Sobel(houghInputImg,cv2.CV_64F,1,0,ksize=5)
     sobel64f_y = cv2.Sobel(houghInputImg,cv2.CV_64F,0,1,ksize=5)
     
@@ -405,8 +392,6 @@ if hough != 0:
                phi = int(np.round(phiAngle[x][y],0))
                RTable[phi].append(Node)
                #print("x:",x,"y:",y,"r:",Node.dist,"alpha:",Node.angle*180.0/np.pi,"phi:",phiAngle[x][y],phi)
-    
-    houghTargetImg = cv2.imread(sys.argv[1],0)
     
     a_target,b_target = houghTargetImg.shape[:2]
     phiAngle_target  = np.zeros((a_target,b_target),np.double)
@@ -471,6 +456,23 @@ if hough != 0:
                                 houghPoints.append((voteXY_Node.yCor,voteXY_Node.xCor))
 
     cv2.imshow("Detected Contour",detectedContourImg)
+    return houghPoints
+
+finalX,finalY = (int(sys.argv[2]),int(sys.argv[3]))
+hough = int(sys.argv[4])
+
+IMGY,IMGX = img.shape[0],img.shape[1]
+houghPoints = []
+
+if hough != 0:
+    if hough ==1:
+        preserveObject = True
+    elif hough ==2:
+        preserveObject = False
+    houghInputImg = cv2.imread(sys.argv[5],0)
+    houghTargetImg = cv2.imread(sys.argv[1],0)
+    print("Hough : Using Reference object as :",sys.argv[5])
+    houghPoints = getHoughPoints(houghInputImg,houghTargetImg)
 
 
 if finalY > IMGY:
@@ -479,6 +481,17 @@ else:
     outputImage = deleteHorizontalSeam(img,IMGY - finalY,houghPoints)
 
 cv2.imshow("After Y Modification",outputImage)
+
+houghPoints = []
+if hough != 0:
+    if hough ==1:
+        preserveObject = True
+    elif hough ==2:
+        preserveObject = False
+    houghInputImg = cv2.imread(sys.argv[5],0)
+    houghTargetImg = cv2.cvtColor(outputImage,cv2.COLOR_BGR2GRAY)
+    print("Hough : Using Reference object as :",sys.argv[5])
+    houghPoints = getHoughPoints(houghInputImg,houghTargetImg)
 
 if finalX > IMGX:
     outputImage = appendVerticalSeam(outputImage,finalX - IMGX,houghPoints)
