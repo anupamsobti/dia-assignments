@@ -8,8 +8,12 @@ import sys
 img = cv2.imread(sys.argv[1])
 
 def updateEnergyFunction(energyFunction,houghPoints):
+    global preserveObject
     for (x,y) in houghPoints:
-        energyFunction[y,x] = 255
+        if preserveObject:
+            energyFunction[y,x] = 255
+        else:
+            energyFunction[y,x] = 0
     return energyFunction
 
 def appendVerticalSeam(img,noOfSeams,houghPoints):
@@ -359,7 +363,11 @@ hough = int(sys.argv[4])
 IMGY,IMGX = img.shape[0],img.shape[1]
 houghPoints = []
 
-if hough == 1:
+if hough != 0:
+    if hough ==1:
+        preserveObject = True
+    elif hough ==2:
+        preserveObject = False
     houghInputImg = cv2.imread(sys.argv[5],0)
     print("Hough : Using Reference object as :",sys.argv[5])
     
@@ -378,7 +386,7 @@ if hough == 1:
     #choose a centroid
     xc = np.round(a/2+0.5)
     yc = np.round(b/2+0.5)
-    print("centeroid in source: (",xc,",",yc,")")
+    print("Centroid in source: (",xc,",",yc,")")
     
     #construction of RTable using gradient angle (phiAngle) computed above
     rAlpha = namedtuple('rAlpha', ['dist', 'cosAlpha', 'sinAlpha'])
@@ -456,7 +464,7 @@ if hough == 1:
                     for s in range(scalingRes+1):
                         vote = len(Q[xc][yc][theta][l*(scalingRes)+s])
                         if vote > Threshold:
-                            print("Vote:",vote,"centeroid detected:(",xc,",",yc,")",s,l)
+                            #print("Vote:",vote,"centeroid detected:(",xc,",",yc,")",s,l)
                             for v in range(vote):
                                 voteXY_Node =  Q[xc][yc][theta][l*(scalingRes)+s][v]
                                 detectedContourImg[voteXY_Node.xCor][voteXY_Node.yCor] = 255
