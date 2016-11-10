@@ -114,33 +114,51 @@ def concat_feature_new(X_pyramid,X_prime_pyramid,l,i,j,L):
     index = 0
     #i,j is the pixel being synthesized. So neigbourhood in X_prime will be valid upto i,j-1
     
+    w,h = X_pyramid[l].shape
    #for main image at level = l, 25 pixels
     for x in range(i-2,i+3):
         for y in range(j-2,j+3):
-            #print(x,y)
-            feature_vector[index] = X_pyramid[l][x,y]
-            index = index + 1
+            if x>=0 and x<=w-1 and y>=0 and y<=h-1:
+                feature_vector[index] = X_pyramid[l][x,y]
+                index = index + 1
+            else:
+                feature_vector[index] = X_pyramid[l][i,j]
+                index = index + 1
+
     feature_vector[0:25] = feature_vector[0:25]*gaussian_5x5
+
+    w,h = X_prime_pyramid[l].shape
     #For prime image at level = l, 12 pixels
     for x in range(i-2,i+1):
         for y in range(j-2,j+3):
             if(x == i and y >= j):
                break 
-            feature_vector[index] = X_prime_pyramid[l][x,y]
-            index = index + 1
+            if x>=0 and x<=w-1 and y>=0 and y<=h-1:
+               feature_vector[index] = X_prime_pyramid[l][x,y]
+               index = index + 1
+            else:
+                feature_vector[index] = X_prime_pyramid[l][i,j]
+                index = index + 1
 
     feature_vector[25:37] = feature_vector[25:37]*gaussian_12
 
    #for level l+1 (coarser level), since it is synthesised completely we will consider all 3x3 neighbourhood of i/2,j/2
     i_prev,j_prev = np.floor(i/2).real.astype(int),np.floor(j/2).real.astype(int)
     if(l<L-1):
+        w,h = X_pyramid[l+1].shape
         for x in range(i_prev-1,i_prev+2):
             for y in range(j_prev-1,j_prev+2):
-                feature_vector[index] = X_pyramid[l+1][x,y]
-                index = index + 1
-                
-                feature_vector[index] = X_prime_pyramid[l+1][x,y]
-                index = index + 1
+                if x>=0 and x<=w-1 and y>=0 and y<=h-1:
+                    feature_vector[index] = X_pyramid[l+1][x,y]
+                    index = index + 1
+                    feature_vector[index] = X_prime_pyramid[l+1][x,y]
+                    index = index + 1
+                else:
+                    feature_vector[index] = X_pyramid[l+1][i_prev,j_prev]
+                    index = index + 1
+                    feature_vector[index] = X_prime_pyramid[l+1][i_prev,j_prev]
+                    index = index + 1
+
     feature_vector[37:55] = feature_vector[37:55] * gaussian_3x3
 
     return feature_vector
@@ -154,7 +172,6 @@ def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_p
     #feature vector near pixel q
     F_q = concat_feature_new(B_pyramid, B_prime_pyramid,l, i, j, L)
     minDistance = 100000
-    print("considering q",i,j)
     for r_x in range(i-2,i+1):
         for r_y in range(j-2,j+3):
             if(r_x == i and r_y >= j):
@@ -170,7 +187,7 @@ def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_p
             if(src_x < 2 or src_x>(h-3) or src_y<2  or src_y>(w-3)):
                 continue
 
-            print("nbr r:",r_x,r_y,"srcMapping s(r):",src_x,src_y)
+            #print("nbr r:",r_x,r_y,"srcMapping s(r):",src_x,src_y)
             F_p = concat_feature_new(A_pyramid, A_prime_pyramid,l,src_x, src_y, L)
             distance = np.linalg.norm(F_p - F_q)
             if(distance < minDistance):
@@ -184,13 +201,13 @@ def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_p
 def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyramid,
                                            Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L,knn):
 
-    print("for pixel q:",i,j)
+    #print("**   for pixel q:    ***",i,j)
 
     #pi_app,pj_app = best_approximate_match(A_featurePyramid,B_featurePyramid,l,i,j)
     #pi_app,pj_app = best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j)
     pi_app,pj_app = best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j)
     h,w = B_pyramid[l].shape
-    print("best_approx_match p_app:",pi_app,pj_app)
+    #print("best_approx_match p_app:",pi_app,pj_app)
 
     #for coarsest level only ANN to be considered, as we don't have S_pyramid ready for that 
     if( (i<2) or (i>(h-3)) or (j<2) or (j>(w-3)) or (l == L-1)):
@@ -198,7 +215,7 @@ def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyra
     
 
     pi_coh,pj_coh = best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_pyramid,l,i,j,L)
-    print("best_coherent match: r_star:",pi_coh,pj_coh)
+    #print("best_coherent match: r_star:",pi_coh,pj_coh)
 
     #concatenation of features from source or target images at level l and level l-1
     app_Fp = concat_feature_new(A_pyramid,A_prime_pyramid,l,pi_app,pj_app,L)
@@ -214,10 +231,10 @@ def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyra
     d_coh = np.linalg.norm(coh_Fp - Fq)
      
     if d_coh <= d_app * (1 + (2**(l - L))*coherence_param_k):
-        print("best_match: coh",pi_coh,pj_coh)
+        #print("best_match: coh",pi_coh,pj_coh)
         return(pi_coh,pj_coh)
     else:
-        print("best_match: approx",pi_app,pj_app)
+        #print("best_match: approx",pi_app,pj_app)
         return(pi_app,pj_app)
 
     
@@ -327,9 +344,9 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
         B_featurePyramid.append(level_feature)
 
     #from l = (L-1) to 0
-    #from coarsest resolution to finest resolution
+    #from coarsest resolution (L-1) to finest resolution (L=0)
     #for l in range(L-1,-1,-1):
-    for l in range(L-1,L-5,-1):
+    for l in range(L-1,-1,-1):
         h,w = B_pyramid[l].shape
         #for i in range(2,h-2):
         #    for j in range(2,w-2):
@@ -361,5 +378,6 @@ for i in range(Bheight):
 
 
 cv2.imshow('TPrime',B_PRIME_RGB)
+cv2.imwrite('TPrime.jpg',B_PRIME_RGB)
 cv2.waitKey(0)
 
