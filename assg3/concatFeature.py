@@ -52,8 +52,7 @@ for i in range(Bheight):
         B_YIQ[i,j] = YIQ
         B_Y[i,j] = YIQ[0]
 
-
-def best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j):
+def train_PyramidData(A_pyramid,l):
     imgA = A_pyramid[l]
 
     noOfRows,noOfColumns = imgA.shape
@@ -69,7 +68,16 @@ def best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j):
     
     knn = cv2.ml.KNearest_create()
     knn.train(trainData,cv2.ml.ROW_SAMPLE,responses)
-    newcomer = np.array(0).astype(np.float32)
+    
+    return knn
+
+
+def best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j):
+    imgA = A_pyramid[l]
+
+    noOfRows,noOfColumns = imgA.shape
+    pixelValue = B_pyramid[l][i][j]
+    newcomer = np.array(pixelValue).astype(np.float32)
     ret, results, neighbours ,dist = knn.findNearest(newcomer, 1)
     
     (yNearest,xNearest) = divmod(results,noOfRows)
@@ -174,13 +182,13 @@ def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_p
 
 
 def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyramid,
-                                           Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L):
+                                           Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L,knn):
 
     print("for pixel q:",i,j)
 
     #pi_app,pj_app = best_approximate_match(A_featurePyramid,B_featurePyramid,l,i,j)
-    pi_app,pj_app = best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j)
-
+    #pi_app,pj_app = best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j)
+    pi_app,pj_app = best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j)
     h,w = B_pyramid[l].shape
     print("best_approx_match p_app:",pi_app,pj_app)
 
@@ -325,10 +333,11 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
         h,w = B_pyramid[l].shape
         #for i in range(2,h-2):
         #    for j in range(2,w-2):
+        knn = train_PyramidData(A_pyramid,l)
         for i in range(0,h):
             for j in range(0,w):
                 best_i,best_j = best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyramid,
-                                           Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L)
+                                           Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L,knn)
                 S_pyramid[l][i,j] = (best_i,best_j)
                 #print("sourceMapping",i,j,S_pyramid[l][i,j])
                 B_prime_pyramid[l][i,j] = A_prime_pyramid[l][best_i,best_j]
