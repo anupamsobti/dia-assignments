@@ -8,7 +8,22 @@ import colorsys
 gaussian_5x5 = np.array([1,4,6,4,1,4,16,24,16,4,6,24,36,24,6,4,16,24,16,4,1,4,6,4,1])/256.
 gaussian_12  = np.array([1,4,6,4,1,4,16,24,16,4,6,24])/256.
 gaussian_3x3 = np.array([0.077847,0.123317,0.077847,0.123317,0.195346,0.123317,0.077847,0.123317,0.077847,0.077847,0.123317,0.077847,0.123317,0.195346,0.123317,0.077847,0.123317,0.077847])
-coherence_param_k = 15
+coherence_param_k = 0.5
+
+#Function for luminance remapping - Returns image with remapped histogram
+def luminanceRemap(sourceImage,inputImage):
+    sourceImageMean = sourceImage.mean()
+    sourceImageStd = sourceImage.std()
+    inputImageMean = inputImage.mean()
+    inputImageStd = inputImage.std()
+    #print("sourceImageMean : ",sourceImageMean, " Input Image Mean : ",inputImageMean)
+    (Xmax,Ymax) = sourceImage.shape
+    for x in range(Xmax):
+        for y in range(Ymax):
+            #newValue = ((sourceImage.item(x,y) - sourceImageMean) * (inputImageStd/sourceImageStd)) + inputImageMean
+            newValue = (inputImageStd * (sourceImage.item(x,y) - sourceImageMean) /sourceImageStd) + inputImageMean
+            sourceImage.itemset((x,y),newValue)
+
 
 ######### reading images in RGB format ###############
 #read images in RGB format
@@ -16,6 +31,7 @@ A_RGB = cv2.imread(sys.argv[1])
 A_PRIME_RGB = cv2.imread(sys.argv[2])
 B_RGB = cv2.imread(sys.argv[3])
 B_PRIME_RGB = np.zeros(B_RGB.shape,dtype=np.float32)
+B_PRIME_RGB_SAVE = np.zeros(B_RGB.shape,dtype=np.float32)
 
 ######### convert each image to YIQ format and create Y images ###########
 A_YIQ = np.zeros(A_RGB.shape, dtype=np.float32)
@@ -27,6 +43,7 @@ A_PRIME_Y = np.zeros(A_PRIME_RGB.shape[0:2], dtype=np.float32)
 B_Y = np.zeros(B_RGB.shape[0:2], dtype=np.float32)
 
 
+    
 Aheight,Awidth = A_RGB.shape[0:2]
 for i in range(Aheight):
     for j in range(Awidth):
@@ -51,6 +68,7 @@ for i in range(Bheight):
         YIQ = colorsys.rgb_to_yiq(colors[0],colors[1],colors[2])
         B_YIQ[i,j] = YIQ
         B_Y[i,j] = YIQ[0]
+
 
 def train_PyramidData(A_pyramid,l):
     imgA = A_pyramid[l]
@@ -81,9 +99,11 @@ def best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j):
     ret, results, neighbours ,dist = knn.findNearest(newcomer, 1)
     
     (yNearest,xNearest) = divmod(results,noOfRows)
-    yNearest = int(yNearest)
-    xNearest = int(xNearest)
-
+ 
+    yNearest = int(yNearest-0.5)
+    xNearest = int(xNearest-0.5)
+    #xNearest =  np.floor(xNearest-0.5).real.astype(int)
+    #yNearest =  np.floor(yNearest-0.5).real.astype(int)
     return yNearest,xNearest
     
 def best_approximate_match(A_featurePyramid,B_featurePyramid,l,i,j):
@@ -120,10 +140,7 @@ def concat_feature_new(X_pyramid,X_prime_pyramid,l,i,j,L):
         for y in range(j-2,j+3):
             if x>=0 and x<=w-1 and y>=0 and y<=h-1:
                 feature_vector[index] = X_pyramid[l][x,y]
-                index = index + 1
-            else:
-                feature_vector[index] = X_pyramid[l][i,j]
-                index = index + 1
+            index = index + 1
 
     feature_vector[0:25] = feature_vector[0:25]*gaussian_5x5
 
@@ -135,10 +152,7 @@ def concat_feature_new(X_pyramid,X_prime_pyramid,l,i,j,L):
                break 
             if x>=0 and x<=w-1 and y>=0 and y<=h-1:
                feature_vector[index] = X_prime_pyramid[l][x,y]
-               index = index + 1
-            else:
-                feature_vector[index] = X_prime_pyramid[l][i,j]
-                index = index + 1
+            index = index + 1
 
     feature_vector[25:37] = feature_vector[25:37]*gaussian_12
 
@@ -150,24 +164,18 @@ def concat_feature_new(X_pyramid,X_prime_pyramid,l,i,j,L):
             for y in range(j_prev-1,j_prev+2):
                 if x>=0 and x<=w-1 and y>=0 and y<=h-1:
                     feature_vector[index] = X_pyramid[l+1][x,y]
-                    index = index + 1
-                    feature_vector[index] = X_prime_pyramid[l+1][x,y]
-                    index = index + 1
-                else:
-                    feature_vector[index] = X_pyramid[l+1][i_prev,j_prev]
-                    index = index + 1
-                    feature_vector[index] = X_prime_pyramid[l+1][i_prev,j_prev]
-                    index = index + 1
+                    feature_vector[index+1] = X_prime_pyramid[l+1][x,y]
+                index = index + 2
 
     feature_vector[37:55] = feature_vector[37:55] * gaussian_3x3
 
     return feature_vector
 
-def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_pyramid,l,i,j,L):
+def best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_pyramid,l,i,j,L,pi_app,pj_app):
     h,w = A_pyramid[l].shape
     
     #intialize with some value
-    final_x,final_y = i,j
+    final_x,final_y = pi_app,pj_app
 
     #feature vector near pixel q
     F_q = concat_feature_new(B_pyramid, B_prime_pyramid,l, i, j, L)
@@ -202,19 +210,20 @@ def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyra
                                            Aprime_featurePyramid,B_featurePyramid,S_pyramid,l,i,j,L,knn):
 
     #print("**   for pixel q:    ***",i,j)
-
     #pi_app,pj_app = best_approximate_match(A_featurePyramid,B_featurePyramid,l,i,j)
-    #pi_app,pj_app = best_approximate_match_knn(A_pyramid,B_pyramid,l,i,j)
+   
     pi_app,pj_app = best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j)
     h,w = B_pyramid[l].shape
     #print("best_approx_match p_app:",pi_app,pj_app)
 
-    #for coarsest level only ANN to be considered, as we don't have S_pyramid ready for that 
+    #for coarsest level and for border 2 rows and 2 columns only ANN is considered, 
+    #as we don't have S_pyramid ready for that
     if( (i<2) or (i>(h-3)) or (j<2) or (j>(w-3)) or (l == L-1)):
+        #print("best ANN ret",pi_app,pj_app)
         return pi_app,pj_app
     
 
-    pi_coh,pj_coh = best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_pyramid,l,i,j,L)
+    pi_coh,pj_coh = best_coherence_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,S_pyramid,l,i,j,L,pi_app,pj_app)
     #print("best_coherent match: r_star:",pi_coh,pj_coh)
 
     #concatenation of features from source or target images at level l and level l-1
@@ -224,8 +233,6 @@ def best_match(A_pyramid,A_prime_pyramid,B_pyramid,B_prime_pyramid,A_featurePyra
     Fq = concat_feature_new(B_pyramid,B_prime_pyramid,l,i,j,L)
     
     #AFeature(p_app) - BFeature(q)
-    d_app = np.linalg.norm(A_featurePyramid[l][pi_app,pj_app] - B_featurePyramid[l][i,j])
-    d_coh = np.linalg.norm(A_featurePyramid[l][pi_coh,pj_coh] - B_featurePyramid[l][i,j])
 
     d_app = np.linalg.norm(app_Fp - Fq)
     d_coh = np.linalg.norm(coh_Fp - Fq)
@@ -348,6 +355,7 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
     #for l in range(L-1,-1,-1):
     for l in range(L-1,-1,-1):
         h,w = B_pyramid[l].shape
+        #print(l,h,w)
         #for i in range(2,h-2):
         #    for j in range(2,w-2):
         knn = train_PyramidData(A_pyramid,l)
@@ -361,23 +369,25 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
         #print(S_pyramid[l])
 
     #from last stage of pyramid,copy the calculated feature
-    h,w = B_pyramid[L-1].shape
+    h,w = B_pyramid[0].shape
     for i in range(h):
         for j in range(w):
-            B_PRIME_Y[i,j] = B_prime_pyramid[L-1][i,j]
+            B_PRIME_Y[i,j] = B_prime_pyramid[0][i,j]
 
     return B_PRIME_Y
 
 
-
+luminanceRemap(A_Y,B_Y)
+luminanceRemap(A_PRIME_Y,B_Y)
 B_PRIME_Y = createImageAnalogy(A_Y,A_PRIME_Y,B_Y)
 
 for i in range(Bheight):
     for j in range(Bwidth):
         B_PRIME_RGB[i,j] = colorsys.yiq_to_rgb(B_PRIME_Y[i,j],B_YIQ[i,j,1],B_YIQ[i,j,2])
+        B_PRIME_RGB_SAVE[i,j] = B_PRIME_RGB[i,j]*255.
 
-
+cv2.imwrite("finalOutput.png",B_PRIME_RGB_SAVE)
 cv2.imshow('TPrime',B_PRIME_RGB)
-cv2.imwrite('TPrime.jpg',B_PRIME_RGB)
+
 cv2.waitKey(0)
 
