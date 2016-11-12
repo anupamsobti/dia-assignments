@@ -8,7 +8,7 @@ import colorsys
 gaussian_5x5 = np.array([1,4,6,4,1,4,16,24,16,4,6,24,36,24,6,4,16,24,16,4,1,4,6,4,1])/256.
 gaussian_12  = np.array([1,4,6,4,1,4,16,24,16,4,6,24])/256.
 gaussian_3x3 = np.array([0.077847,0.123317,0.077847,0.123317,0.195346,0.123317,0.077847,0.123317,0.077847,0.077847,0.123317,0.077847,0.123317,0.195346,0.123317,0.077847,0.123317,0.077847])
-coherence_param_k = 1
+coherence_param_k = 0.3
 
 #Function for luminance remapping - Returns image with remapped histogram
 def luminanceRemap(sourceImage,inputImage):
@@ -23,8 +23,6 @@ def luminanceRemap(sourceImage,inputImage):
             #newValue = ((sourceImage.item(x,y) - sourceImageMean) * (inputImageStd/sourceImageStd)) + inputImageMean
             newValue = (inputImageStd * (sourceImage.item(x,y) - sourceImageMean) /sourceImageStd) + inputImageMean
             sourceImage.itemset((x,y),newValue)
-
-    cv2.waitKey(0)
 
 
 ######### reading images in RGB format ###############
@@ -47,37 +45,31 @@ B_Y = np.zeros(B_RGB.shape[0:2], dtype=np.float32)
 
     
 Aheight,Awidth = A_RGB.shape[0:2]
-#for i in range(Aheight):
-#    for j in range(Awidth):
-#        colors = A_RGB[i,j]/255.
-#        YIQ = colorsys.rgb_to_yiq(colors[0],colors[1],colors[2])
-#        A_YIQ[i,j] = YIQ
-#        A_Y[i,j] = YIQ[0]
+for i in range(Aheight):
+    for j in range(Awidth):
+        colors = A_RGB[i,j]/255.
+        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+        A_YIQ[i,j] = YIQ
+        A_Y[i,j] = YIQ[0]
 
-A_RGB = A_RGB/255.
-A_Y,A_I,A_Q = colorsys.rgb_to_yiq(A_RGB[:,:,2],A_RGB[:,:,1],A_RGB[:,:,0])
 
 APrimeHeight,APrimeWidth = A_PRIME_RGB.shape[0:2]
-#for i in range(APrimeHeight):
-#    for j in range(APrimeWidth):
-#        colors = A_PRIME_RGB[i,j]/255.
-#        YIQ = colorsys.rgb_to_yiq(colors[0],colors[1],colors[2])
-#        A_PRIME_YIQ[i,j] = YIQ
-#        A_PRIME_Y[i,j] = YIQ[0]
+for i in range(APrimeHeight):
+    for j in range(APrimeWidth):
+        colors = A_PRIME_RGB[i,j]/255.
+        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+        A_PRIME_YIQ[i,j] = YIQ
+        A_PRIME_Y[i,j] = YIQ[0]
 
-A_PRIME_RGB = A_PRIME_RGB/255.
-A_PRIME_Y,A_PRIME_I,A_PRIME_Q = colorsys.rgb_to_yiq(A_PRIME_RGB[:,:,2],A_PRIME_RGB[:,:,1],A_PRIME_RGB[:,:,0])
 
 Bheight,Bwidth = B_RGB.shape[0:2]
-#for i in range(Bheight):
-#    for j in range(Bwidth):
-#        colors = B_RGB[i,j]/255.
-#        YIQ = colorsys.rgb_to_yiq(colors[0],colors[1],colors[2])
-#        B_YIQ[i,j] = YIQ
-#        B_Y[i,j] = YIQ[0]
+for i in range(Bheight):
+    for j in range(Bwidth):
+        colors = B_RGB[i,j]/255.
+        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+        B_YIQ[i,j] = YIQ
+        B_Y[i,j] = YIQ[0]
 
-B_RGB = B_RGB/255.
-B_Y,B_I,B_Q = colorsys.rgb_to_yiq(B_RGB[:,:,2],B_RGB[:,:,1],B_RGB[:,:,0])
 
 def train_PyramidData(A_pyramid,l):
     imgA = A_pyramid[l]
@@ -109,10 +101,15 @@ def best_approximate_match_knn(knn,A_pyramid,B_pyramid,l,i,j):
     
     (yNearest,xNearest) = divmod(results,noOfRows)
  
-    yNearest = int(yNearest-0.5)
-    xNearest = int(xNearest-0.5)
+    yNearest = int(yNearest)
+    xNearest = int(xNearest)
     #xNearest =  np.floor(xNearest-0.5).real.astype(int)
     #yNearest =  np.floor(yNearest-0.5).real.astype(int)
+    if(xNearest >= noOfColumns):
+        xNearest = noOfColumns-1
+    if(yNearest >= noOfRows):
+        yNearest = noOfRows-1
+
     return yNearest,xNearest
     
 def best_approximate_match(A_featurePyramid,B_featurePyramid,l,i,j):
@@ -280,7 +277,7 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
 
     hA,wA = G_A.shape
    #for i in range(6):a
-    while ((hA >= 20) and (wA >= 20)):
+    while ((hA >= 10) and (wA >= 10)):
         G_A = cv2.pyrDown(G_A)
         A_pyramid.append(G_A)
 
@@ -301,7 +298,7 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
 
     L = len(A_pyramid)
 
-
+    #print("Length",L)
 ######### pre-computing feature for each pixel, at every level for A, Aprime and B 
 ######### creating a list of length L, for each level l. Each list have corresponding number of pixels as in pyramid above
 ######### with each pixel there will be a 5x5 = 25 neighbouring pixels feature data associated.
@@ -377,29 +374,95 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
                 B_prime_pyramid[l][i,j] = A_prime_pyramid[l][best_i,best_j]
         #print(S_pyramid[l])
 
+
     #from last stage of pyramid,copy the calculated feature
     h,w = B_pyramid[0].shape
     for i in range(h):
         for j in range(w):
             B_PRIME_Y[i,j] = B_prime_pyramid[0][i,j]
+            yiq = A_PRIME_YIQ[S_pyramid[0][i,j][0],S_pyramid[0][i,j][1]]
+            #print(yiq,i,j,"S:",S_pyramid[0][i,j])
+            r,g,b = colorsys.yiq_to_rgb(yiq[0],yiq[1],yiq[2])
+            B_PRIME_RGB[i,j] = b,g,r
+            B_PRIME_RGB_SAVE[i,j] = B_PRIME_RGB[i,j]*255
 
     return B_PRIME_Y
 
 
+
+#Callback for selecting swatches
+def grayMouseCallback(event,x,y,flags,param):
+    global inputSwatches,inputFaceImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
+    if event == cv2.EVENT_LBUTTONDOWN:
+        (startX,startY) = (x,y)
+        print ("Grayscale: Starts at ",startX,startY)
+    elif event == cv2.EVENT_LBUTTONUP:
+        endX,endY = x,y
+        print ("Grayscale: Ends at ",x,y)
+        if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
+            #inputSwatches.append((startX,endX,startY,endY))
+            inputSwatches.append((startY,endY,startX,endX))  #Corrected to swap x and y since mouse callback returns swapped x and y
+            cv2.rectangle(inputFaceImage_swatched,(startX,startY),(endX,endY),0,3)
+        else:
+            print("Swatch Rejected")
+
+def colorMouseCallback(event,x,y,flags,param):
+    global modifyingSwatches,modifyingFaceImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
+    if event == cv2.EVENT_LBUTTONDOWN:
+        (startX,startY) = (x,y)
+        print ("Colored Input: Starts at ",startX,startY)
+    elif event == cv2.EVENT_LBUTTONUP:
+        endX,endY = x,y
+        print ("Colored Input: Ends at ",x,y)
+        if ((endX - startX > minRegionX) and (endY - startY > minRegionY)):
+            #modifyingSwatches.append((startX,endX,startY,endY))
+            modifyingSwatches.append((startY,endY,startX,endX)) #Corrected to swap x and y since mouse callback returns swapped x and y
+            cv2.rectangle(modifyingFaceImage_swatched,(startX,startY),(endX,endY),(255,0,0),3)
+        else:
+            print("Swatch rejected")
+
+
+minRegionX = 10
+minRegionY = 10
+inputSwatches = []
+modifyingSwatches = []
+
+inputFaceImage = cv2.imread(sys.argv[1])
+modifyingFaceImage = cv2.imread(sys.argv[3])
+
+#Creating windows to display input image and source image
+cv2.namedWindow("Face to be modified")
+cv2.setMouseCallback("Face to be modified",grayMouseCallback)
+
+cv2.namedWindow("Example face")
+cv2.setMouseCallback("Example face",colorMouseCallback)
+
+
+
+
+
+
 luminanceRemap(A_Y,B_Y)
 luminanceRemap(A_PRIME_Y,B_Y)
-B_PRIME_Y = np.zeros((Bheight,Bwidth),dtype=np.float32)
-#B_PRIME_Y = createImageAnalogy(A_Y,A_PRIME_Y,B_Y)
+
+B_PRIME_Y_ret = createImageAnalogy(A_Y,A_PRIME_Y,B_Y)
 
 #for i in range(Bheight):
 #    for j in range(Bwidth):
-#        B_PRIME_RGB[i,j] = colorsys.yiq_to_rgb(B_PRIME_Y[i,j],B_YIQ[i,j,1],B_YIQ[i,j,2])
+#        r,g,b = colorsys.yiq_to_rgb(B_PRIME_Y_ret[i,j],B_YIQ[i,j,1],B_YIQ[i,j,2])
+#        B_PRIME_RGB[i,j] = b,g,r
+        #B_PRIME_RGB[i,j] = colorsys.yiq_to_rgb(B_PRIME_Y[i,j],B_YIQ[i,j,1],B_YIQ[i,j,2])
 #        B_PRIME_RGB_SAVE[i,j] = B_PRIME_RGB[i,j]*255.
 
-B_PRIME_RGB = cv2.merge(colorsys.yiq_to_rgb(B_PRIME_Y,B_I,B_Q)*255)
-B_PRIME_RGB = cv2.cvtColor(B_PRIME_RGB,cv2.COLOR_RGB2BGR)
+#for i in range(Bheight):
+#    for j in range(Bwidth):
+#         y,i,q = A_PRIME_YIQ[S_pyramid[0][i,j]]
+#         r,g,b = colorsys.yiq_to_rgb(y,i,q)
+#         B_PRIME_RGB[i,j] = b,g,r
+#         B_PRIME_RGB_SAVE[i,j] = B_PRIME_RGB[i,j]*255
+       
 
-cv2.imwrite("finalOutput.png",B_PRIME_RGB)
+cv2.imwrite("finalOutput.png",B_PRIME_RGB_SAVE)
 cv2.imshow('TPrime',B_PRIME_RGB)
 
 cv2.waitKey(0)
