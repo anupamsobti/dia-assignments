@@ -43,32 +43,36 @@ A_PRIME_Y = np.zeros(A_PRIME_RGB.shape[0:2], dtype=np.float32)
 B_Y = np.zeros(B_RGB.shape[0:2], dtype=np.float32)
 
 
+def convertToYIQ(img):
+    img = img/255
+    Y,I,Q = colorsys.rgb_to_yiq(img[:,:,2],img[:,:,1],img[:,:,0])
+    return Y,I,Q
     
-Aheight,Awidth = A_RGB.shape[0:2]
-for i in range(Aheight):
-    for j in range(Awidth):
-        colors = A_RGB[i,j]/255.
-        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
-        A_YIQ[i,j] = YIQ
-        A_Y[i,j] = YIQ[0]
-
-
-APrimeHeight,APrimeWidth = A_PRIME_RGB.shape[0:2]
-for i in range(APrimeHeight):
-    for j in range(APrimeWidth):
-        colors = A_PRIME_RGB[i,j]/255.
-        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
-        A_PRIME_YIQ[i,j] = YIQ
-        A_PRIME_Y[i,j] = YIQ[0]
-
-
-Bheight,Bwidth = B_RGB.shape[0:2]
-for i in range(Bheight):
-    for j in range(Bwidth):
-        colors = B_RGB[i,j]/255.
-        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
-        B_YIQ[i,j] = YIQ
-        B_Y[i,j] = YIQ[0]
+#Aheight,Awidth = A_RGB.shape[0:2]
+#for i in range(Aheight):
+#    for j in range(Awidth):
+#        colors = A_RGB[i,j]/255.
+#        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+#        A_YIQ[i,j] = YIQ
+#        A_Y[i,j] = YIQ[0]
+#
+#
+#APrimeHeight,APrimeWidth = A_PRIME_RGB.shape[0:2]
+#for i in range(APrimeHeight):
+#    for j in range(APrimeWidth):
+#        colors = A_PRIME_RGB[i,j]/255.
+#        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+#        A_PRIME_YIQ[i,j] = YIQ
+#        A_PRIME_Y[i,j] = YIQ[0]
+#
+#
+#Bheight,Bwidth = B_RGB.shape[0:2]
+#for i in range(Bheight):
+#    for j in range(Bwidth):
+#        colors = B_RGB[i,j]/255.
+#        YIQ = colorsys.rgb_to_yiq(colors[2],colors[1],colors[0])
+#        B_YIQ[i,j] = YIQ
+#        B_Y[i,j] = YIQ[0]
 
 
 def train_PyramidData(A_pyramid,l):
@@ -391,7 +395,7 @@ def createImageAnalogy(A_Y,A_prime_Y,B_Y):
 
 
 #Callback for selecting swatches
-def grayMouseCallback(event,x,y,flags,param):
+def inputFaceMouseCallback(event,x,y,flags,param):
     global inputSwatches,inputFaceImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
     if event == cv2.EVENT_LBUTTONDOWN:
         (startX,startY) = (x,y)
@@ -406,7 +410,7 @@ def grayMouseCallback(event,x,y,flags,param):
         else:
             print("Swatch Rejected")
 
-def colorMouseCallback(event,x,y,flags,param):
+def modifyingFaceMouseCallback(event,x,y,flags,param):
     global modifyingSwatches,modifyingFaceImage_swatched,startX,startY,endX,endY,minRegionX,minRegionY
     if event == cv2.EVENT_LBUTTONDOWN:
         (startX,startY) = (x,y)
@@ -430,22 +434,44 @@ modifyingSwatches = []
 inputFaceImage = cv2.imread(sys.argv[1])
 modifyingFaceImage = cv2.imread(sys.argv[3])
 
+inputFaceImage_swatched = inputFaceImage.copy()
+modifyingFaceImage_swatched = modifyingFaceImage.copy()
+
 #Creating windows to display input image and source image
 cv2.namedWindow("Face to be modified")
-cv2.setMouseCallback("Face to be modified",grayMouseCallback)
+cv2.setMouseCallback("Face to be modified",modifyingFaceMouseCallback)
 
 cv2.namedWindow("Example face")
-cv2.setMouseCallback("Example face",colorMouseCallback)
+cv2.setMouseCallback("Example face",inputFaceMouseCallback)
 
+while(1):
+    cv2.imshow("Face to be modified",modifyingFaceImage_swatched)
+    cv2.imshow("Example face",inputFaceImage_swatched)
+    if cv2.waitKey(20) & 0xFF == 27:
+        if len(modifyingSwatches) != len(inputSwatches):
+            print("Number of swatches is unequal")
+            cv2.destroyAllWindows()
+            exit()
+        break
 
+sampleOutputImage = cv2.imread(sys.argv[2])
+outputImageY,outputImageI,outputImageQ = convertToYIQ(modifyingFaceImage)
 
+for i,swatch in enumerate(inputSwatches):
+    startX,endX,startY,endY = swatch
+    A_Y,A_I,A_Q = convertToYIQ(inputFaceImage[startY:endY,startX:endX,:])
 
+    startX,endX,startY,endY = modifyingSwatches[i]
+    B_Y,B_I,B_Q = convertToYIQ(modifyingFaceImage[startY:endY,startX:endX,:])
 
+    A_PRIME_Y,A_PRIME_I,A_PRIME_Q = convertToYIQ(sampleOutputImage[startX:endX,startY:endY,:])
 
-luminanceRemap(A_Y,B_Y)
-luminanceRemap(A_PRIME_Y,B_Y)
+    luminanceRemap(A_Y,B_Y)
+    luminanceRemap(A_PRIME_Y,B_Y)
 
-B_PRIME_Y_ret = createImageAnalogy(A_Y,A_PRIME_Y,B_Y)
+    B_PRIME_Y_ret = createImageAnalogy(A_Y,A_PRIME_Y,B_Y)   #SAURABH -- need to modify
+
+    outputImageY[startX:endX,startY:endY,:] = B_PRIME_Y_ret
 
 #for i in range(Bheight):
 #    for j in range(Bwidth):
